@@ -6,7 +6,7 @@ const guildSchema = new mongoose.Schema({
     random_quiz_interval: { type: Number, default: 0 }, // In minutes (0 = disabled)
     auction: { list: Array },
     premium: {
-        enabled: { type: Boolean, default: true },
+        enabled: { type: Boolean, default: false },
         time: { type: Number, default: 0 }
     },
     rolePing: { type: String },
