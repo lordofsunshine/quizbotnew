@@ -10,6 +10,7 @@ module.exports = {
 
 
       let data = await guildModel.findOne({ guild_id: interaction.guild.id });
+      if(!dada) dada = await guildModel.create({ guild_id: interaction.guild.id });
       let mapp = null
       if (data.auction.list.length > 0) {
           mapp = data.auction.list.map((x, i) => {
