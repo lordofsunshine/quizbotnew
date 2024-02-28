@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, MessageEmbed } = require('discord.js');
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, EmbedBuilder } = require('discord.js');
 const userSchema = require('../models/userModel.js');
 
 module.exports = {
@@ -21,7 +21,7 @@ module.exports = {
                     .setStyle('Danger'), // обновлено: использовать строку 'DANGER'
             );
 
-        const embed = new MessageEmbed()
+        const embed = new EmbedBuilder()
             .setTitle('⚠️ Подтверждение')
             .setDescription('Вы уверены, что хотите удалить **ВСЕ** данные о себе в Quiz?')
             .setColor('#ffa136'); // Установите цвет, который вам нужен
