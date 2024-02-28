@@ -1,5 +1,4 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { MessageActionRow, MessageButton } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const userSchema = require('../models/userModel.js');
 
 module.exports = {
@@ -8,13 +7,13 @@ module.exports = {
         .setDescription('Удаляет ваши данные из нашей базы данных'),
 
     async execute(interaction) {
-        const row = new MessageActionRow()
+        const row = new ActionRowBuilder()
             .addComponents(
-                new MessageButton()
+                new ButtonBuilder()
                     .setCustomId('confirm')
                     .setLabel('Да')
                     .setStyle('SUCCESS'),
-                new MessageButton()
+                new ButtonBuilder()
                     .setCustomId('cancel')
                     .setLabel('Нет')
                     .setStyle('DANGER'),
