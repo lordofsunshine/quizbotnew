@@ -8,6 +8,8 @@ module.exports = {
         .setDescription('Удаляет ваши данные из нашей базы данных'),
 
     async execute(interaction) {
+        const user = await userSchema.findOne({ user_id: interaction.user.id });
+        if (!user) return interaction.reply({content: '❌ У вас нет никаких данных, хранящихся в нашей базе данных.', ephemeral: true});
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -25,20 +27,22 @@ module.exports = {
         const confirmEmbed = new EmbedBuilder()
             .setTitle('⚠️ Подтверждение удаления')
             .setDescription('Вы уверены, что хотите удалить **ВСЕ** данные о себе в Quiz?')
-            .setColor('#ffff00');
+            .setColor('#ffb521');
 
         const successEmbed = new EmbedBuilder()
-            .setTitle('✅ Удаление данных')
+            .setTitle('✅ Успешно!')
             .setDescription('Ваши данные были успешно удалены из нашей базы данных.')
-            .setColor('#00ff00');
+            .setColor('#2fde4c');
 
         const cancelEmbed = new EmbedBuilder()
             .setTitle('❌ Удаление отменено')
-            .setColor('#ff0000');
+            .setFooter('Данные не были удалены.')
+            .setColor('#e32d2d');
 
         const timeoutEmbed = new EmbedBuilder()
             .setTitle('⌛ Время на подтверждение истекло')
-            .setColor('#ff0000');
+            .setFooter('Пропишите команду ещё раз, если хотите удалить ваши данные.')
+            .setColor('#1f1f1f');
 
         const confirmMessage = await interaction.reply({
             embeds: [confirmEmbed],
@@ -46,7 +50,7 @@ module.exports = {
         });
 
         const filter = (i) => i.customId === 'confirm' || i.customId === 'cancel';
-        const collector = interaction.channel.createMessageComponentCollector({ filter, time: 15000 });
+        const collector = interaction.channel.createMessageComponentCollector({ filter, time: 20000 });
 
         collector.on('collect', async (i) => {
             if (i.customId === 'confirm') {
