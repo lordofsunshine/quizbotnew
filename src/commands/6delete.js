@@ -14,30 +14,30 @@ module.exports = {
                     .setCustomId('confirm')
                     .setLabel('Да')
                     .setStyle('Success')
-                    .setDisabled(false), // Кнопка не отключена по умолчанию
+                    .setDisabled(false),
                 new ButtonBuilder()
                     .setCustomId('cancel')
                     .setLabel('Нет')
                     .setStyle('Danger')
-                    .setDisabled(false), // Кнопка не отключена по умолчанию
+                    .setDisabled(false),
             );
 
         const confirmEmbed = new EmbedBuilder()
             .setTitle('⚠️ Подтверждение удаления')
             .setDescription('Вы уверены, что хотите удалить **ВСЕ** данные о себе в Quiz?')
-            .setColor('#ffff00'); // Установите цвет, который вам нужен
+            .setColor('#ffff00');
 
         const cancelEmbed = new EmbedBuilder()
             .setTitle('❌ Удаление отменено')
-            .setColor('#ff0000'); // Установите цвет, который вам нужен
+            .setColor('#ff0000');
 
         const timeoutEmbed = new EmbedBuilder()
             .setTitle('⌛ Время на подтверждение истекло')
-            .setColor('#ff0000'); // Установите цвет, который вам нужен
+            .setColor('#ff0000');
 
         const confirmMessage = await interaction.reply({
             embeds: [confirmEmbed],
-            components: [row.toJSON()], // Convert ActionRowBuilder to plain object
+            components: [row.toJSON()],
         });
 
         const filter = (i) => i.customId === 'confirm' || i.customId === 'cancel';
@@ -48,7 +48,7 @@ module.exports = {
                 await userSchema.deleteOne({ user_id: interaction.user.id });
                 await confirmMessage.edit({ embeds: [confirmEmbed], components: [] });
             } else {
-                await confirmMessage.edit({ embeds: [cancelEmbed], components: [row.toJSON().components[0].components[0], row.toJSON().components[0].components[1].setDisabled(true)] });
+                await confirmMessage.edit({ embeds: [cancelEmbed], components: [] });
             }
             collector.stop();
         });
@@ -59,4 +59,4 @@ module.exports = {
             }
         });
     }
-}
+};
