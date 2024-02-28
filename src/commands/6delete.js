@@ -50,7 +50,7 @@ module.exports = {
         });
 
         const filter = (i) => i.customId === 'confirm' || i.customId === 'cancel';
-        const collector = interaction.channel.createMessageComponentCollector({ filter, time: 20000 });
+        const collector = interaction.channel.createMessageComponentCollector({ filter, time: 15000 });
 
         collector.on('collect', async (i) => {
             if (i.customId === 'confirm') {
