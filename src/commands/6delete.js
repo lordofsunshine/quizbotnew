@@ -1,5 +1,4 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, MessageEmbed } = require('discord.js');
 const userSchema = require('../models/userModel.js');
 
 module.exports = {
@@ -8,16 +7,18 @@ module.exports = {
         .setDescription('Удаляет ваши данные из нашей базы данных'),
 
     async execute(interaction) {
-        const row = new MessageActionRow()
+        const user = await userSchema.findOne({ user_id: interaction.user.id });
+        if (!user) return interaction.reply({content: '❌ У вас нет никаких данных, хранящихся в нашей базе данных.', ephemeral: true});
+        const row = new ActionRowBuilder()
             .addComponents(
-                new MessageButton()
+                new ButtonBuilder()
                     .setCustomId('confirm')
                     .setLabel('Да')
-                    .setStyle('Success'),
-                new MessageButton()
+                    .setStyle('Success'), // обновлено: использовать строку 'SUCCESS'
+                new ButtonBuilder()
                     .setCustomId('cancel')
                     .setLabel('Нет')
-                    .setStyle('Danger'),
+                    .setStyle('Danger'), // обновлено: использовать строку 'DANGER'
             );
 
         const embed = new MessageEmbed()
@@ -36,16 +37,16 @@ module.exports = {
         collector.on('collect', async (i) => {
             if (i.customId === 'confirm') {
                 await userSchema.deleteOne({ user_id: interaction.user.id });
-                await i.update({ content: '✅ Ваши данные были удалены из нашей базы данных.', components: [] });
+                await i.update({ content: ':white_check_mark: Ваши данные были удалены из нашей базы данных.', components: [] });
             } else {
-                await i.update({ content: '❌ Удаление отменено.', components: [] });
+                await i.update({ content: ':x: Удаление отменено.', components: [] });
             }
             collector.stop();
         });
 
         collector.on('end', (collected, reason) => {
             if (reason === 'time') {
-                interaction.editReply({ content: '⌛ Время на подтверждение истекло. Удаление отменено.', components: [] });
+                interaction.editReply({ content: ':hourglass: Время на подтверждение истекло. Удаление отменено.', components: [] });
             }
         });
     }
