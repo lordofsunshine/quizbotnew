@@ -1,3 +1,4 @@
+const { SlashCommandBuilder } = require('@discordjs/builders');
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, EmbedBuilder } = require('discord.js');
 const userSchema = require('../models/userModel.js');
 
@@ -7,27 +8,33 @@ module.exports = {
         .setDescription('Удаляет ваши данные из нашей базы данных'),
 
     async execute(interaction) {
-        const user = await userSchema.findOne({ user_id: interaction.user.id });
-        if (!user) return interaction.reply({content: '❌ У вас нет никаких данных, хранящихся в нашей базе данных.', ephemeral: true});
         const row = new ActionRowBuilder()
             .addComponents(
-                new ButtonBuilder()
+                new MessageButton()
                     .setCustomId('confirm')
                     .setLabel('Да')
-                    .setStyle('Success'), // обновлено: использовать строку 'SUCCESS'
-                new ButtonBuilder()
+                    .setStyle('Success'),
+                new MessageButton()
                     .setCustomId('cancel')
                     .setLabel('Нет')
-                    .setStyle('Danger'), // обновлено: использовать строку 'DANGER'
+                    .setStyle('Danger'),
             );
 
-        const embed = new EmbedBuilder()
-            .setTitle('⚠️ Подтверждение')
-            .setDescription('Вы уверены, что хотите удалить **ВСЕ** данные о себе в Quiz?')
-            .setColor('#ffa136'); // Установите цвет, который вам нужен
+        const confirmEmbed = new EmbedBuilder()
+            .setTitle('✅ Удаление данных')
+            .setDescription('Ваши данные были успешно удалены из нашей базы данных.')
+            .setColor('#00ff00'); // Установите цвет, который вам нужен
 
-        await interaction.reply({
-            embeds: [embed],
+        const cancelEmbed = new EmbedBuilder()
+            .setTitle('❌ Удаление отменено')
+            .setColor('#ff0000'); // Установите цвет, который вам нужен
+
+        const timeoutEmbed = new EmbedBuilder()
+            .setTitle('⌛ Время на подтверждение истекло')
+            .setColor('#ff0000'); // Установите цвет, который вам нужен
+
+        const confirmMessage = await interaction.reply({
+            content: '⚠️ Вы уверены, что хотите удалить **ВСЕ** данные о себе в Quiz?',
             components: [row],
         });
 
@@ -37,16 +44,16 @@ module.exports = {
         collector.on('collect', async (i) => {
             if (i.customId === 'confirm') {
                 await userSchema.deleteOne({ user_id: interaction.user.id });
-                await i.update({ content: ':white_check_mark: Ваши данные были удалены из нашей базы данных.', components: [] });
+                await interaction.followUp({ embeds: [confirmEmbed] });
             } else {
-                await i.update({ content: ':x: Удаление отменено.', components: [] });
+                await interaction.followUp({ embeds: [cancelEmbed] });
             }
             collector.stop();
         });
 
         collector.on('end', (collected, reason) => {
             if (reason === 'time') {
-                interaction.editReply({ content: ':hourglass: Время на подтверждение истекло. Удаление отменено.', components: [] });
+                interaction.followUp({ embeds: [timeoutEmbed] });
             }
         });
     }
