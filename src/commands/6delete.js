@@ -27,6 +27,11 @@ module.exports = {
             .setDescription('Вы уверены, что хотите удалить **ВСЕ** данные о себе в Quiz?')
             .setColor('#ffff00');
 
+        const successEmbed = new EmbedBuilder()
+            .setTitle('✅ Удаление данных')
+            .setDescription('Ваши данные были успешно удалены из нашей базы данных.')
+            .setColor('#00ff00');
+
         const cancelEmbed = new EmbedBuilder()
             .setTitle('❌ Удаление отменено')
             .setColor('#ff0000');
@@ -46,7 +51,7 @@ module.exports = {
         collector.on('collect', async (i) => {
             if (i.customId === 'confirm') {
                 await userSchema.deleteOne({ user_id: interaction.user.id });
-                await confirmMessage.edit({ embeds: [confirmEmbed], components: [] });
+                await confirmMessage.edit({ embeds: [successEmbed], components: [] });
             } else {
                 await confirmMessage.edit({ embeds: [cancelEmbed], components: [] });
             }
