@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
 const userSchema = require('../models/userModel.js');
 
 module.exports = {
@@ -7,23 +8,25 @@ module.exports = {
         .setDescription('Удаляет ваши данные из нашей базы данных'),
 
     async execute(interaction) {
-        const user = await userSchema.findOne({ user_id: interaction.user.id });
-        if (!user) return interaction.reply({content: '❌ У вас нет никаких данных, хранящихся в нашей базе данных.', ephemeral: true});
-        
-        const row = new ActionRowBuilder()
+        const row = new MessageActionRow()
             .addComponents(
-                new ButtonBuilder()
+                new MessageButton()
                     .setCustomId('confirm')
                     .setLabel('Да')
-                    .setStyle('Success'), // обновлено: использовать строку 'SUCCESS'
-                new ButtonBuilder()
+                    .setStyle('Success'),
+                new MessageButton()
                     .setCustomId('cancel')
                     .setLabel('Нет')
-                    .setStyle('Danger'), // обновлено: использовать строку 'DANGER'
+                    .setStyle('Danger'),
             );
 
+        const embed = new MessageEmbed()
+            .setTitle('⚠️ Подтверждение')
+            .setDescription('Вы уверены, что хотите удалить **ВСЕ** данные о себе в Quiz?')
+            .setColor('#ffa136'); // Установите цвет, который вам нужен
+
         await interaction.reply({
-            content: '⚠️ Вы уверены, что хотите удалить **ВСЕ** данные о себе в Quiz?',
+            embeds: [embed],
             components: [row],
         });
 
