@@ -9,7 +9,7 @@ module.exports = {
 
     async execute(interaction) {
         const user = await userSchema.findOne({ user_id: interaction.user.id });
-        if (!user) return interaction.reply({content: '❌ У вас нет никаких данных, хранящихся в нашей базе данных.', ephemeral: true});
+        if (!user) return interaction.reply({ content: '❌ У вас нет никаких данных, хранящихся в нашей базе данных.', ephemeral: true });
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -53,6 +53,11 @@ module.exports = {
         const collector = interaction.channel.createMessageComponentCollector({ filter, time: 15000 });
 
         collector.on('collect', async (i) => {
+            // Проверка, что пользователь, который нажал кнопку, является тем же, кто отправил команду
+            if (i.user.id !== interaction.user.id) {
+                return i.reply({ content: '❌ Вы не можете использовать эти кнопки.', ephemeral: true });
+            }
+
             if (i.customId === 'confirm') {
                 await userSchema.deleteOne({ user_id: interaction.user.id });
                 await confirmMessage.edit({ embeds: [successEmbed], components: [] });
