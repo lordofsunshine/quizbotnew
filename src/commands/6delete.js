@@ -37,7 +37,7 @@ module.exports = {
 
         const confirmMessage = await interaction.reply({
             embeds: [confirmEmbed],
-            components: [row],
+            components: [row.toJSON()], // Convert ActionRowBuilder to plain object
         });
 
         const filter = (i) => i.customId === 'confirm' || i.customId === 'cancel';
@@ -48,10 +48,7 @@ module.exports = {
                 await userSchema.deleteOne({ user_id: interaction.user.id });
                 await confirmMessage.edit({ embeds: [confirmEmbed], components: [] });
             } else {
-                await confirmMessage.edit({ embeds: [cancelEmbed], components: [row.setComponents([
-                    {...row.components[0], disabled: true},
-                    {...row.components[1], disabled: true},
-                ])] });
+                await confirmMessage.edit({ embeds: [cancelEmbed], components: [row.toJSON().components[0].components[0], row.toJSON().components[0].components[1].setDisabled(true)] });
             }
             collector.stop();
         });
