@@ -12,15 +12,15 @@ module.exports = {
                 new ButtonBuilder()
                     .setCustomId('confirm')
                     .setLabel('Да')
-                    .setStyle('Secondary'), // обновлено: использовать строку 'SUCCESS'
+                    .setStyle('ButtonStyle.Success'), // обновлено: использовать строку 'SUCCESS'
                 new ButtonBuilder()
                     .setCustomId('cancel')
                     .setLabel('Нет')
-                    .setStyle('Secondary'), // обновлено: использовать строку 'DANGER'
+                    .setStyle('ButtonStyle.Danger'), // обновлено: использовать строку 'DANGER'
             );
 
         await interaction.reply({
-            content: 'Вы уверены, что хотите удалить все данные о себе?',
+            content: '⚠️ Вы уверены, что хотите удалить **ВСЕ** данные о себе в Quiz?',
             components: [row],
         });
 
