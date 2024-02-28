@@ -36,12 +36,12 @@ module.exports = {
 
         const cancelEmbed = new EmbedBuilder()
             .setTitle('❌ Удаление отменено')
-            .setFooter('Данные не были удалены.')
+            .setFooter({ text: `Данные не были удалены.` })
             .setColor('#e32d2d');
 
         const timeoutEmbed = new EmbedBuilder()
             .setTitle('⌛ Время на подтверждение истекло')
-            .setFooter('Пропишите команду ещё раз, если хотите удалить ваши данные.')
+            .setFooter({ text: `Пропишите команду ещё раз, если хотите удалить ваши данные.` })
             .setColor('#1f1f1f');
 
         const confirmMessage = await interaction.reply({
