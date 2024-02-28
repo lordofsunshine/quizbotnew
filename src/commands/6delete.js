@@ -10,11 +10,11 @@ module.exports = {
     async execute(interaction) {
         const row = new ActionRowBuilder()
             .addComponents(
-                new MessageButton()
+                new ButtonBuilder()
                     .setCustomId('confirm')
                     .setLabel('Да')
                     .setStyle('Success'),
-                new MessageButton()
+                new ButtonBuilder()
                     .setCustomId('cancel')
                     .setLabel('Нет')
                     .setStyle('Danger'),
