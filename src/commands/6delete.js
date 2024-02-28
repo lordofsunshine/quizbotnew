@@ -12,11 +12,11 @@ module.exports = {
                 new ButtonBuilder()
                     .setCustomId('confirm')
                     .setLabel('Да')
-                    .setStyle('PRIMARY'), // обновлено: использовать строку 'SUCCESS'
+                    .setStyle('Secondary'), // обновлено: использовать строку 'SUCCESS'
                 new ButtonBuilder()
                     .setCustomId('cancel')
                     .setLabel('Нет')
-                    .setStyle('DANGER'), // обновлено: использовать строку 'DANGER'
+                    .setStyle('Secondary'), // обновлено: использовать строку 'DANGER'
             );
 
         await interaction.reply({
