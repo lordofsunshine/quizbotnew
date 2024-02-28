@@ -12,7 +12,7 @@ module.exports = {
                 new ButtonBuilder()
                     .setCustomId('confirm')
                     .setLabel('Да')
-                    .setStyle('SUCCESS'), // обновлено: использовать строку 'SUCCESS'
+                    .setStyle('PRIMARY'), // обновлено: использовать строку 'SUCCESS'
                 new ButtonBuilder()
                     .setCustomId('cancel')
                     .setLabel('Нет')
