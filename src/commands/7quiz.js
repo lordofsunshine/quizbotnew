@@ -42,9 +42,11 @@ module.exports = {
         }
     },
 
-execute(interaction) {
+async execute(interaction) {
         let dada = await guildModel.findOne({ guild_id: interaction.guild.id })
+// Новая строка
         if(!dada) dada = await guildModel.create({ guild_id: interaction.guild.id });
+// Новая строка
         let time = 120000
         if (dada.cooldown && dada.cooldown + time > Date.now()) return interaction.reply({ content: ":x: Подождите пару минут, чтобы прописать эту команду." })
         else {
