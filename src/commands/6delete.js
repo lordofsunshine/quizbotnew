@@ -30,9 +30,9 @@ module.exports = {
         collector.on('collect', async (i) => {
             if (i.customId === 'confirm') {
                 await userSchema.deleteOne({ user_id: interaction.user.id });
-                await i.reply({ content: '✅ Ваши данные были удалены из нашей базы данных.', ephemeral: true });
+                await i.update({ content: '✅ Ваши данные были удалены из нашей базы данных.', components: [] });
             } else {
-                await i.reply({ content: '❌ Удаление отменено.', ephemeral: true });
+                await i.update({ content: '❌ Удаление отменено.', components: [] });
             }
             collector.stop();
         });
