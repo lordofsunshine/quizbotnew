@@ -13,17 +13,19 @@ module.exports = {
                 new ButtonBuilder()
                     .setCustomId('confirm')
                     .setLabel('Да')
-                    .setStyle('Success'),
+                    .setStyle('Success')
+                    .setDisabled(false), // Кнопка не отключена по умолчанию
                 new ButtonBuilder()
                     .setCustomId('cancel')
                     .setLabel('Нет')
-                    .setStyle('Danger'),
+                    .setStyle('Danger')
+                    .setDisabled(false), // Кнопка не отключена по умолчанию
             );
 
         const confirmEmbed = new EmbedBuilder()
-            .setTitle('✅ Удаление данных')
-            .setDescription('Ваши данные были успешно удалены из нашей базы данных.')
-            .setColor('#00ff00'); // Установите цвет, который вам нужен
+            .setTitle('⚠️ Подтверждение удаления')
+            .setDescription('Вы уверены, что хотите удалить **ВСЕ** данные о себе в Quiz?')
+            .setColor('#ffff00'); // Установите цвет, который вам нужен
 
         const cancelEmbed = new EmbedBuilder()
             .setTitle('❌ Удаление отменено')
@@ -34,7 +36,7 @@ module.exports = {
             .setColor('#ff0000'); // Установите цвет, который вам нужен
 
         const confirmMessage = await interaction.reply({
-            content: '⚠️ Вы уверены, что хотите удалить **ВСЕ** данные о себе в Quiz?',
+            embeds: [confirmEmbed],
             components: [row],
         });
 
@@ -44,16 +46,19 @@ module.exports = {
         collector.on('collect', async (i) => {
             if (i.customId === 'confirm') {
                 await userSchema.deleteOne({ user_id: interaction.user.id });
-                await interaction.followUp({ embeds: [confirmEmbed] });
+                await confirmMessage.edit({ embeds: [confirmEmbed], components: [] });
             } else {
-                await interaction.followUp({ embeds: [cancelEmbed] });
+                await confirmMessage.edit({ embeds: [cancelEmbed], components: [row.setComponents([
+                    {...row.components[0], disabled: true},
+                    {...row.components[1], disabled: true},
+                ])] });
             }
             collector.stop();
         });
 
         collector.on('end', (collected, reason) => {
             if (reason === 'time') {
-                interaction.followUp({ embeds: [timeoutEmbed] });
+                confirmMessage.edit({ embeds: [timeoutEmbed], components: [] });
             }
         });
     }
