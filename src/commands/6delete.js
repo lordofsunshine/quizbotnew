@@ -7,16 +7,19 @@ module.exports = {
         .setDescription('Удаляет ваши данные из нашей базы данных'),
 
     async execute(interaction) {
+        const user = await userSchema.findOne({ user_id: interaction.user.id });
+        if (!user) return interaction.reply({content: '❌ У вас нет никаких данных, хранящихся в нашей базе данных.', ephemeral: true});
+        
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('confirm')
                     .setLabel('Да')
-                    .setStyle('ButtonStyle.Success'), // обновлено: использовать строку 'SUCCESS'
+                    .setStyle('Success'), // обновлено: использовать строку 'SUCCESS'
                 new ButtonBuilder()
                     .setCustomId('cancel')
                     .setLabel('Нет')
-                    .setStyle('ButtonStyle.Danger'), // обновлено: использовать строку 'DANGER'
+                    .setStyle('Danger'), // обновлено: использовать строку 'DANGER'
             );
 
         await interaction.reply({
