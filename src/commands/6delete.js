@@ -1,4 +1,5 @@
-const {SlashCommandBuilder, MessageActionRow, MessageButton} = require('discord.js');
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const { MessageActionRow, MessageButton } = require('discord.js');
 const userSchema = require('../models/userModel.js');
 
 module.exports = {
