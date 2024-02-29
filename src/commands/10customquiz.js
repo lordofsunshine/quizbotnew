@@ -59,7 +59,7 @@ client.on('interactionCreate', async (interaction) => {
                     .setPlaceholder('Введите время в часах (макс. 24)')
             );
 
-        await interaction.reply({
+        await interaction.followUp({
             content: 'Введите информацию для установки викторины:',
             components: [setQuizModal],
         });
@@ -78,12 +78,12 @@ client.on('messageCreate', async (message) => {
     const isQuizChannel = message.channel.type === 'dm' && isPrivateMessage;
 
     if (isQuizChannel) {
-        const question = interaction.options.getString('question');
-        const wrongAnswers = interaction.options.getString('wrongAnswers').split(',');
-        const correctAnswer = interaction.options.getString('correctAnswer');
-        const quizColor = interaction.options.getString('quizColor');
-        const quizFooter = interaction.options.getString('quizFooter');
-        const quizTime = interaction.options.getNumber('quizTime') * 3600000; // Переводим часы в миллисекунды
+        const question = interaction.message.components[0].components[0].value;
+        const wrongAnswers = interaction.message.components[0].components[1].value.split(',');
+        const correctAnswer = interaction.message.components[0].components[2].value;
+        const quizColor = interaction.message.components[0].components[3].value;
+        const quizFooter = interaction.message.components[0].components[4].value;
+        const quizTime = interaction.message.components[0].components[5].value * 3600000; // Переводим часы в миллисекунды
 
         // Пример: отправка викторины через указанное пользователем время
         await setTimeoutPromise(quizTime);
