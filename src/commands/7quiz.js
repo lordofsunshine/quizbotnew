@@ -1,34 +1,3 @@
-// quizUtils.js
-
-// ...
-
-async function awardPoints(difficulty, userId) {
-    let points;
-    switch (difficulty) {
-        case 'easy':
-            points = 2;
-            break;
-        case 'medium':
-            points = 3;
-            break;
-        case 'hard':
-            points = 4;
-            break;
-        default:
-            points = 1; // Default to 1 point for unknown difficulty
-    }
-
-    const user = await getUser(userId);
-    user.points += points;
-    await user.save();
-
-    return points;
-}
-
-// ...
-
-// 7quiz.js
-
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { emojis, trivia_categories } = require('../misc.js');
 const { getCategoryEmoji, capitalizeFirstLetter } = require('../utils/misc.js');
@@ -91,16 +60,6 @@ module.exports = {
         let pointsTable = [];
 
         for (let i = 0; i < rounds; i++) {
-            let response;
-            try {
-                response = await fetchRandomQuestion(category, difficulty);
-                if (!response || !response.question) {
-                    throw new Error("Invalid response from API");
-                }
-            } catch (err) {
-                console.error(err);
-                return interaction.reply({ content: '❌ Произошла ошибка при получении вопроса. Пожалуйста, попробуйте снова.' });
-            }
 
             let {
                 question,
@@ -108,7 +67,9 @@ module.exports = {
                 correct_answer: correctAnswer,
                 incorrect_answers: inAnswers,
                 category: questionCategory
-            } = response;
+            } = await fetchRandomQuestion(category, difficulty).catch((err) => {
+                if (err.message === 'Invalid category') interaction.reply({ content: '❌ Неправильная категория.' });
+            });
 
             if (i !== 0) loadingMessage = await interaction.channel.send({ content: 'Загрузка...' });
             else await interaction.deferReply();
@@ -126,6 +87,7 @@ module.exports = {
             let cat = await translate(questionCategory, { to: "ru" })
             let categoryQuest = cat.text
             await wait(4000)
+
 
             let allAnswers = [correctAnswer, ...incorrectAnswers];
             allAnswers = shuffleArray(allAnswers);
@@ -217,6 +179,7 @@ module.exports = {
                 // Sort the points table
                 pointsTable = pointsTable.sort((a, b) => b.points - a.points);
 
+
                 // Create the points table embed
                 let content = pointsTable.map((user, index) => `${index + 1}. <@${user.userId}> - ${user.points} очков`).join('\n')
                 if (!content) content = "Никто не ответил правильно."
@@ -233,3 +196,4 @@ module.exports = {
         }
     },
 };
+
