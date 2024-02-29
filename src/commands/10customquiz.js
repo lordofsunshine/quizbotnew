@@ -1,6 +1,6 @@
 
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, TextInputBuilder, EmbedBuilder } = require('discord.js');
+const { Client, client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, TextInputBuilder, EmbedBuilder } = require('discord.js');
 const addQuizButton = new ButtonBuilder()
     .setCustomId('addQuizButton')
     .setLabel('Добавить')
