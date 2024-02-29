@@ -5,7 +5,6 @@ const { awardPoints, getUser, fetchRandomQuestion, shuffleArray, createAnswerBut
 const translate = require('@iamtraction/google-translate');
 const guildModel = require('../models/guildModel.js');
 const wait = require('node:timers/promises').setTimeout;
-const axios = require('axios');
 
 let quizzesOnGoing = [];
 
@@ -48,27 +47,6 @@ async execute(interaction) {
 // Новая строка
         if(!dada) dada = await guildModel.create({ guild_id: interaction.guild.id });
 // Новая строка
-
-// Функция для проверки доступности сайта
-async function isWebsiteReachable(url) {
-    try {
-        const response = await axios.head(url);
-        return response.status === 200; // Вернет true, если статус 200 OK
-    } catch (error) {
-        console.error(error);
-        return false; // Если произошла ошибка, считаем, что сайт недоступен
-    }
-}
-
-// Ваш код, использующий функцию проверки доступности
-async function fetchRandomQuestion(category, difficulty) {
-    const websiteUrl = 'https://exampl65e.com'; // Замените на актуальный URL вашего сайта
-
-    if (!(await isWebsiteReachable(websiteUrl))) {
-        await interaction.reply({ content: '❌ Сайт недоступен. Пожалуйста, попробуйте позже.' });
-        return; // Выход из функции в случае недоступности сайта
-    }
-    
         let time = 120000
         if (dada.cooldown && dada.cooldown + time > Date.now()) return interaction.reply({ content: ":x: Подождите пару минут, чтобы прописать эту команду." })
         else {
