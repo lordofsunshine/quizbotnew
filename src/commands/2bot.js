@@ -19,7 +19,6 @@ module.exports = {
             .addFields(
                 { name: 'Основное', value: `> **Задержка:** \`${latency}ms\`\n> ${apiLatencyMsg}\n> **Discord.js:** \`v${require('discord.js').version}\`\n> **Node.js:** \`${process.version}\``, inline: true },
                 { name: 'Дополнительно', value: `> **Разработчик:** [lordofsunshine](https://discord.com/users/1124977093546082354)\n> **Серверов:** \`${interaction.client.guilds.cache.size}\``, inline: true },
-                { name: 'О Guild', value: `> **Канал авто-викторин:** \`${random_quiz_channel}\`\n**Интервал авто-викторин:** ${random_quiz_interval}\n**Упоминаемая роль при авто-викторинах:** \`${rolePing}\` `, inline: false }
             )
             .setColor('#f3ae6d')
             .setThumbnail(interaction.client.user.displayAvatarURL({ dynamic: true }));
