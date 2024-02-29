@@ -8,6 +8,19 @@ const wait = require('node:timers/promises').setTimeout;
 
 let quizzesOnGoing = [];
 
+async function awardPointsByDifficulty(difficulty) {
+    switch (difficulty) {
+        case 'easy':
+            return 2;
+        case 'medium':
+            return 3;
+        case 'hard':
+            return 4;
+        default:
+            return 0;
+    }
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('quiz')
@@ -42,13 +55,10 @@ module.exports = {
         }
     },
 
-async execute(interaction) {
+    async execute(interaction) {
         let dada = await guildModel.findOne({ guild_id: interaction.guild.id })
-// Новая строка
-        if(!dada) dada = await guildModel.create({ guild_id: interaction.guild.id });
-// Новая строка
         let time = 120000
-        if (dada.cooldown && dada.cooldown + time > Date.now()) return interaction.reply({ content: ":x: Подождите пару минут, чтобы прописать эту команду." })
+        if (dada.cooldown && dada.cooldown + time > Date.now()) return interaction.reply({ content: "❌ Подождите пару минут, чтобы прописать эту команду." })
         else {
             dada.cooldown = Date.now()
             dada.save()
@@ -133,7 +143,7 @@ async execute(interaction) {
 
             for (let i = 0; i < correctUsers.length; i++) {
                 const user = await getUser(correctUsers[i].userId);
-                const points = await awardPoints(questionDifficulty, correctUsers[i].userId);
+                const points = await awardPointsByDifficulty(questionDifficulty);
 
                 // Check if the user has already answered this question
                 if (user.correct_answers.some((answer) => answer.question === question)) {
@@ -182,7 +192,6 @@ async execute(interaction) {
                 // Sort the points table
                 pointsTable = pointsTable.sort((a, b) => b.points - a.points);
 
-
                 // Create the points table embed
                 let content = pointsTable.map((user, index) => `${index + 1}. <@${user.userId}> - ${user.points} очков`).join('\n')
                 if (!content) content = "Никто не ответил правильно."
@@ -199,4 +208,3 @@ async execute(interaction) {
         }
     },
 };
-
