@@ -1,4 +1,6 @@
-const { Client, GatewayIntentBits, MessageActionRow, MessageButton, MessageInput, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, MessageInput, EmbedBuilder } = require('discord.js');
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
 module.exports = {
@@ -7,74 +9,88 @@ module.exports = {
         .setDescription('ccc'),
 
     async execute(interaction) {
+        const addQuizButton = new ButtonBuilder()
+            .setCustomId('addQuizButton')
+            .setLabel('Добавить')
+            .setStyle('Secondary');
 
-      client.on('interactionCreate', async (interaction) => {
-          if (!interaction.isButton()) return;
+        const mainMenuRow = new ActionRowBuilder().addComponents(addQuizButton);
 
-          if (interaction.customId === 'setQuizButton') {
-              const setQuizModal = new MessageActionRow()
-                  .addComponents(
-                      new MessageInput()
-                          .setCustomId('question')
-                          .setLabel('Вопрос')
-                          .setPlaceholder('Введите вопрос'),
-                      new MessageInput()
-                          .setCustomId('wrongAnswers')
-                          .setLabel('3 неправильных ответа')
-                          .setPlaceholder('Введите неправильные ответы, разделенные запятой'),
-                      new MessageInput()
-                          .setCustomId('correctAnswer')
-                          .setLabel('1 правильный ответ')
-                          .setPlaceholder('Введите правильный ответ'),
-                      new MessageInput()
-                          .setCustomId('quizColor')
-                          .setLabel('Цвет викторины')
-                          .setPlaceholder('Введите цвет в формате HEX'),
-                      new MessageInput()
-                          .setCustomId('quizFooter')
-                          .setLabel('Подзаголовок (footer)')
-                          .setPlaceholder('Введите подзаголовок'),
-                      new MessageInput()
-                          .setCustomId('quizTime')
-                          .setLabel('Время окончания викторины')
-                          .setPlaceholder('Введите время в часах (макс. 24)')
-                  );
+        await interaction.reply({
+            content: 'Главное меню:',
+            components: [mainMenuRow],
+        });
 
-              await interaction.reply({ content: 'Введите информацию для установки викторины:', components: [setQuizModal] });
-          }
-      });
+        client.on('interactionCreate', async (interaction) => {
+            if (!interaction.isButton()) return;
 
-      // Функция для задержки с использованием промисов
-      function setTimeoutPromise(ms) {
-          return new Promise(resolve => setTimeout(resolve, ms));
-      }
+            if (interaction.customId === 'addQuizButton') {
+                const setQuizModal = new ActionRowBuilder()
+                    .addComponents(
+                        new MessageInput()
+                            .setCustomId('question')
+                            .setLabel('Вопрос')
+                            .setPlaceholder('Введите вопрос'),
+                        new MessageInput()
+                            .setCustomId('wrongAnswers')
+                            .setLabel('3 неправильных ответа')
+                            .setPlaceholder('Введите неправильные ответы, разделенные запятой'),
+                        new MessageInput()
+                            .setCustomId('correctAnswer')
+                            .setLabel('1 правильный ответ')
+                            .setPlaceholder('Введите правильный ответ'),
+                        new MessageInput()
+                            .setCustomId('quizColor')
+                            .setLabel('Цвет викторины')
+                            .setPlaceholder('Введите цвет в формате HEX'),
+                        new MessageInput()
+                            .setCustomId('quizFooter')
+                            .setLabel('Подзаголовок (footer)')
+                            .setPlaceholder('Введите подзаголовок'),
+                        new MessageInput()
+                            .setCustomId('quizTime')
+                            .setLabel('Время окончания викторины')
+                            .setPlaceholder('Введите время в часах (макс. 24)')
+                    );
 
-      client.on('messageCreate', async (message) => {
-          if (message.author.bot) return;
+                await interaction.reply({
+                    content: 'Введите информацию для установки викторины:',
+                    components: [setQuizModal],
+                });
+            }
+        });
 
-          const isPrivateMessage = message.guild === null;
-          const isQuizChannel = message.channel.type === 'dm' && isPrivateMessage;
+        // Функция для задержки с использованием промисов
+        function setTimeoutPromise(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
 
-          if (isQuizChannel) {
-              const question = interaction.options.getString('question');
-              const wrongAnswers = interaction.options.getString('wrongAnswers').split(',');
-              const correctAnswer = interaction.options.getString('correctAnswer');
-              const quizColor = interaction.options.getString('quizColor');
-              const quizFooter = interaction.options.getString('quizFooter');
-              const quizTime = interaction.options.getNumber('quizTime') * 3600000; // Переводим часы в миллисекунды
+        client.on('messageCreate', async (message) => {
+            if (message.author.bot) return;
 
-              // Пример: отправка викторины через указанное пользователем время
-              await setTimeoutPromise(quizTime);
+            const isPrivateMessage = message.guild === null;
+            const isQuizChannel = message.channel.type === 'dm' && isPrivateMessage;
 
-              // Логика отправки викторины
-              const quizEmbed = new EmbedBuilder()
-                  .setTitle(question)
-                  .setDescription([...wrongAnswers, correctAnswer].join('\n'))
-                  .setColor(quizColor)
-                  .setFooter(quizFooter);
+            if (isQuizChannel) {
+                const question = interaction.options.getString('question');
+                const wrongAnswers = interaction.options.getString('wrongAnswers').split(',');
+                const correctAnswer = interaction.options.getString('correctAnswer');
+                const quizColor = interaction.options.getString('quizColor');
+                const quizFooter = interaction.options.getString('quizFooter');
+                const quizTime = interaction.options.getNumber('quizTime') * 3600000; // Переводим часы в миллисекунды
 
-              message.channel.send({ embeds: [quizEmbed] });
-          }
-      });
-    }
-}
+                // Пример: отправка викторины через указанное пользователем время
+                await setTimeoutPromise(quizTime);
+
+                // Логика отправки викторины
+                const quizEmbed = new EmbedBuilder()
+                    .setTitle(question)
+                    .setDescription([...wrongAnswers, correctAnswer].join('\n'))
+                    .setColor(quizColor)
+                    .setFooter(quizFooter);
+
+                message.channel.send({ embeds: [quizEmbed] });
+            }
+        });
+    },
+};
