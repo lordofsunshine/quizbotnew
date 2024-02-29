@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const guild.random_quiz_interval, random_quiz_channel, rolePing = require('../models/guildModel.js');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('bot')
