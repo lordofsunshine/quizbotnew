@@ -212,8 +212,6 @@ async function scheduleRandomQuizzes(guildId = null) {
                 ch++
                 await runRandomQuiz(guild);
             }
-
-
         });
 
         scheduledTasks.set(guildId, task);
@@ -225,33 +223,19 @@ async function scheduleRandomQuizzes(guildId = null) {
         if (!guild) return clientLogger.warn(`Гильдия ${guildId} не была найдена, пропускаю...`);
         await updateTask(guild);
     } else {
-        let cc = 0
-        guilds.forEach((guild) => {
-            if (cc === 1) {
-                cc++
-                setTimeout(() => {
-                    updateTask(guild);
-                }, 10000)
-            } else if (cc === 2) {
-                cc++
-                setTimeout(() => {
-                    updateTask(guild);
+        const shuffledGuilds = guilds.slice(); // Create a copy of the array
+        for (let i = shuffledGuilds.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledGuilds[i], shuffledGuilds[j]] = [shuffledGuilds[j], shuffledGuilds[i]];
+        }
 
-                }, 35000)
-            } else if (cc === 3) {
-                cc = 0
-                setTimeout(() => {
-                    updateTask(guild);
-
-                }, 50000)
-            } else {
-                cc++
+        shuffledGuilds.forEach((guild, index) => {
+            setTimeout(() => {
                 updateTask(guild);
-            }
-
-
+            }, index * 10000); // Adjust the timeout interval as needed
         });
     }
+}
 
     // Handle guilds that no longer have scheduled tasks (e.g., when interval is set to 0) or ones with multiple tasks
     scheduledTasks.forEach((task, guildId) => {
