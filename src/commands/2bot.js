@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { random_quiz_interval, random_quiz_channel, rolePing } = require('../models/guildModel.js');
 
 module.exports = {
