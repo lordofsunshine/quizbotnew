@@ -6,6 +6,10 @@ const client = new Client({
     allowedMentions: { parse: [], repliedUser: true }
 });
 
+    data: new SlashCommandBuilder()
+        .setName('ссс')
+        .setDescription('ссс'),
+        
 const addQuizButton = new ButtonBuilder()
     .setCustomId('addQuizButton')
     .setLabel('Добавить')
