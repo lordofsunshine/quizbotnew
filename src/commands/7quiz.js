@@ -1,3 +1,34 @@
+// quizUtils.js
+
+// ...
+
+async function awardPoints(difficulty, userId) {
+    let points;
+    switch (difficulty) {
+        case 'easy':
+            points = 2;
+            break;
+        case 'medium':
+            points = 3;
+            break;
+        case 'hard':
+            points = 4;
+            break;
+        default:
+            points = 1; // Default to 1 point for unknown difficulty
+    }
+
+    const user = await getUser(userId);
+    user.points += points;
+    await user.save();
+
+    return points;
+}
+
+// ...
+
+// 7quiz.js
+
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { emojis, trivia_categories } = require('../misc.js');
 const { getCategoryEmoji, capitalizeFirstLetter } = require('../utils/misc.js');
@@ -7,19 +38,6 @@ const guildModel = require('../models/guildModel.js');
 const wait = require('node:timers/promises').setTimeout;
 
 let quizzesOnGoing = [];
-
-async function awardPointsByDifficulty(difficulty) {
-    switch (difficulty) {
-        case 'easy':
-            return 2;
-        case 'medium':
-            return 3;
-        case 'hard':
-            return 4;
-        default:
-            return 0;
-    }
-}
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -73,6 +91,16 @@ module.exports = {
         let pointsTable = [];
 
         for (let i = 0; i < rounds; i++) {
+            let response;
+            try {
+                response = await fetchRandomQuestion(category, difficulty);
+                if (!response || !response.question) {
+                    throw new Error("Invalid response from API");
+                }
+            } catch (err) {
+                console.error(err);
+                return interaction.reply({ content: '❌ Произошла ошибка при получении вопроса. Пожалуйста, попробуйте снова.' });
+            }
 
             let {
                 question,
@@ -80,9 +108,7 @@ module.exports = {
                 correct_answer: correctAnswer,
                 incorrect_answers: inAnswers,
                 category: questionCategory
-            } = await fetchRandomQuestion(category, difficulty).catch((err) => {
-                if (err.message === 'Invalid category') interaction.reply({ content: '❌ Неправильная категория.' });
-            });
+            } = response;
 
             if (i !== 0) loadingMessage = await interaction.channel.send({ content: 'Загрузка...' });
             else await interaction.deferReply();
@@ -100,7 +126,6 @@ module.exports = {
             let cat = await translate(questionCategory, { to: "ru" })
             let categoryQuest = cat.text
             await wait(4000)
-
 
             let allAnswers = [correctAnswer, ...incorrectAnswers];
             allAnswers = shuffleArray(allAnswers);
@@ -143,7 +168,7 @@ module.exports = {
 
             for (let i = 0; i < correctUsers.length; i++) {
                 const user = await getUser(correctUsers[i].userId);
-                const points = await awardPointsByDifficulty(questionDifficulty);
+                const points = await awardPoints(questionDifficulty, correctUsers[i].userId);
 
                 // Check if the user has already answered this question
                 if (user.correct_answers.some((answer) => answer.question === question)) {
