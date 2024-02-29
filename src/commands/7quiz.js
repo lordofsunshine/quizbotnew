@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { emojis, trivia_categories } = require('../misc.js');
 const { getCategoryEmoji, capitalizeFirstLetter } = require('../utils/misc.js');
 const { awardPoints, getUser, fetchRandomQuestion, shuffleArray, createAnswerButtons, collectAnswers } = require('../utils/quizUtils.js');
@@ -45,13 +45,8 @@ module.exports = {
     async execute(interaction) {
         let dada = await guildModel.findOne({ guild_id: interaction.guild.id })
         let time = 120000
-        if (dada.cooldown && dada.cooldown + time > Date.now()) {
-            if (!interaction.deferred) {
-                return interaction.reply({ content: '❌ Подождите пару минут, чтобы прописать эту команду.' });
-            } else {
-                console.log("Interaction already deferred.");
-            }
-        } else {
+        if (dada.cooldown && dada.cooldown + time > Date.now()) return interaction.reply({ content: "❌ Подождите пару минут, чтобы прописать эту команду." })
+        else {
             dada.cooldown = Date.now()
             dada.save()
         }
@@ -65,30 +60,16 @@ module.exports = {
         let pointsTable = [];
 
         for (let i = 0; i < rounds; i++) {
-            let fetchedQuestion;
 
-            try {
-                fetchedQuestion = await fetchRandomQuestion(category, difficulty);
-            } catch (err) {
-                if (err.message === 'Invalid category') {
-                    return interaction.reply({ content: '❌ Неправильная категория.' });
-                }
-            }
-
-            console.log("Fetched Question:", fetchedQuestion);
-
-            if (!fetchedQuestion || typeof fetchedQuestion !== 'object') {
-                console.error("Invalid question fetched. Aborting the quiz.");
-                return;
-            }
-
-            const {
+            let {
                 question,
                 difficulty: questionDifficulty,
                 correct_answer: correctAnswer,
                 incorrect_answers: inAnswers,
                 category: questionCategory
-            } = fetchedQuestion;
+            } = await fetchRandomQuestion(category, difficulty).catch((err) => {
+                if (err.message === 'Invalid category') interaction.reply({ content: '❌ Неправильная категория.' });
+            });
 
             if (i !== 0) loadingMessage = await interaction.channel.send({ content: 'Загрузка...' });
             else await interaction.deferReply();
@@ -106,6 +87,7 @@ module.exports = {
             let cat = await translate(questionCategory, { to: "ru" })
             let categoryQuest = cat.text
             await wait(4000)
+
 
             let allAnswers = [correctAnswer, ...incorrectAnswers];
             allAnswers = shuffleArray(allAnswers);
@@ -150,6 +132,7 @@ module.exports = {
                 const user = await getUser(correctUsers[i].userId);
                 const points = await awardPoints(questionDifficulty, correctUsers[i].userId);
 
+                // Check if the user has already answered this question
                 if (user.correct_answers.some((answer) => answer.question === question)) {
                     const index = user.correct_answers.findIndex((answer) => answer.question === question);
                     user.correct_answers[index].amountOfTimes++;
@@ -157,6 +140,7 @@ module.exports = {
                     user.correct_answers.push({ question, amountOfTimes: 1, category: questionCategory });
                 }
 
+                // Add the points to the points table
                 if (pointsTable.some((user) => user.userId === correctUsers[i].userId)) {
                     const index = pointsTable.findIndex((user) => user.userId === correctUsers[i].userId);
                     pointsTable[index].points += points;
@@ -171,6 +155,7 @@ module.exports = {
                 if (correctUsers.some((user) => user.userId === userAnswers[i].userId)) continue;
                 const user = await getUser(userAnswers[i].userId);
 
+                // Check if the user has already answered this question
                 if (user.incorrect_answers.some((answer) => answer.question === question)) {
                     const index = user.incorrect_answers.findIndex((answer) => answer.question === question);
                     user.incorrect_answers[index].amountOfTimes++;
@@ -181,6 +166,9 @@ module.exports = {
                 await user.save();
             }
 
+            // Update the points table
+
+            // Wait 5 seconds before starting the next round
             if (i !== rounds - 1) {
                 const nextRnd = await interaction.channel.send({ content: '⚠️ Следующий раунд начнётся через 5 секунд...' });
                 await new Promise(resolve => setTimeout(resolve, 5000));
@@ -188,8 +176,11 @@ module.exports = {
             } else {
                 const finishedMsg = await interaction.channel.send({ content: '✅ Викторина закончена!' });
 
+                // Sort the points table
                 pointsTable = pointsTable.sort((a, b) => b.points - a.points);
 
+
+                // Create the points table embed
                 let content = pointsTable.map((user, index) => `${index + 1}. <@${user.userId}> - ${user.points} очков`).join('\n')
                 if (!content) content = "Никто не ответил правильно."
                 const pointsTableEmbed = new EmbedBuilder()
@@ -199,6 +190,7 @@ module.exports = {
 
                 await finishedMsg.edit({ embeds: [pointsTableEmbed] });
 
+                // Remove the quiz from the quizzesOnGoing array
                 quizzesOnGoing = quizzesOnGoing.filter((quiz) => quiz.channelId !== interaction.channelId);
             }
         }
