@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { emojis, trivia_categories } = require('../misc.js');
 const { getCategoryEmoji, capitalizeFirstLetter } = require('../utils/misc.js');
 const { awardPoints, getUser, fetchRandomQuestion, shuffleArray, createAnswerButtons, collectAnswers } = require('../utils/quizUtils.js');
@@ -45,8 +45,13 @@ module.exports = {
     async execute(interaction) {
         let dada = await guildModel.findOne({ guild_id: interaction.guild.id })
         let time = 120000
-        if (dada.cooldown && dada.cooldown + time > Date.now()) return interaction.reply({ content: "❌ Подождите пару минут, чтобы прописать эту команду." })
-        else {
+        if (dada.cooldown && dada.cooldown + time > Date.now()) {
+            if (!interaction.deferred) {
+                return interaction.reply({ content: '❌ Подождите пару минут, чтобы прописать эту команду.' });
+            } else {
+                console.log("Interaction already deferred.");
+            }
+        } else {
             dada.cooldown = Date.now()
             dada.save()
         }
@@ -91,7 +96,7 @@ module.exports = {
             let texted = await translate(question, { to: "ru" })
             let texted2 = await translate(correctAnswer, { to: "ru" })
 
-            let fetchedQuestion;
+            question = texted.text
             correctAnswer = texted2.text
             let incorrectAnswers = []
             inAnswers.map(async x => {
