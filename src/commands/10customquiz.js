@@ -1,7 +1,10 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, TextInputBuilder, EmbedBuilder } = require('discord.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 
-const client = new Client();
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds],
+    allowedMentions: { parse: [], repliedUser: true }
+});
 
 const addQuizButton = new ButtonBuilder()
     .setCustomId('addQuizButton')
