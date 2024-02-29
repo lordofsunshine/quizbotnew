@@ -194,33 +194,33 @@ async function scheduleRandomQuizzes(guildId = null) {
     const scheduledTasks = new Map();
 
     async function updateTask(guild) {
-        let ch = 0
+        let ch = 0;
         const intervalInMinutes = guild.random_quiz_interval;
-        const guildId = guild.guild_id;
+        const currentGuildId = guild.guild_id;
 
         // Check if a task for this guild already exists and destroy it
-        if (scheduledTasks.has(guildId)) scheduledTasks.get(guildId).destroy();
+        if (scheduledTasks.has(currentGuildId)) scheduledTasks.get(currentGuildId).destroy();
 
         // Create new cron job to run the quiz
         const task = cron.schedule(`*/${intervalInMinutes} * * * *`, async () => {
             if (ch === 3) {
                 setTimeout(async () => {
                     await runRandomQuiz(guild);
-                }, 60000)
-                ch = 0
+                }, 60000);
+                ch = 0;
             } else {
-                ch++
+                ch++;
                 await runRandomQuiz(guild);
             }
         });
 
-        scheduledTasks.set(guildId, task);
+        scheduledTasks.set(currentGuildId, task);
     }
 
     // Create, update scheduled tasks for each guild
     if (guildId) {
-        const guild = guilds.find((guild) => guild.guild_id === guildId);
-        if (!guild) return clientLogger.warn(`Гильдия ${guildId} не была найдена, пропускаю...`);
+        const guild = guilds.find((g) => g.guild_id === guildId);
+        if (!guild) return clientLogger.warn(`Guild ${guildId} not found, skipping...`);
         await updateTask(guild);
     } else {
         const shuffledGuilds = guilds.slice(); // Create a copy of the array
