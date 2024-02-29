@@ -91,7 +91,7 @@ module.exports = {
             let texted = await translate(question, { to: "ru" })
             let texted2 = await translate(correctAnswer, { to: "ru" })
 
-            question = texted.text
+            let fetchedQuestion;
             correctAnswer = texted2.text
             let incorrectAnswers = []
             inAnswers.map(async x => {
