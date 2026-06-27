@@ -1,34 +1,32 @@
-/**
- * @name latencyLogger
- * @description Periodically logs the bot's latency and API latency
- */
-
-const { Logger } = require('./logger');
 const { REST, Routes } = require('discord.js');
+const { Logger } = require('./logger');
 
-let latencyData = { history: [] }
+const latencyData = { history: [] };
+
+function getDiscordToken() {
+    return process.env.DEV_MODE
+        ? (process.env.DEV_TOKEN || process.env.TOKEN)
+        : (process.env.TOKEN || process.env.DEV_TOKEN);
+}
 
 async function latencyLogger(client) {
-
-    const latencyLogger = new Logger('latency', true);
-    const token = process.env.DEV_MODE ? process.env.TOKEN : process.env.DEV_TOKEN;
-    const rest = new REST({ version: '9' }).setToken(token);
+    const latencyLoggerInstance = new Logger('latency', true);
+    const rest = new REST({ version: '10' }).setToken(getDiscordToken());
 
     setInterval(async () => {
         try {
             const timeNow = Date.now();
-            await rest.get(Routes.applicationCommands(client.user.id))
+            await rest.get(Routes.applicationCommands(client.user.id));
             const latency = Date.now() - timeNow;
-            const apiLatency = Math.round(client.ws.ping) > 0 ? Math.round(client.ws.ping) : 0;
+            const apiLatency = Math.max(0, Math.round(client.ws.ping));
 
             latencyData.history.push({ time: timeNow, latency, apiLatency });
-
+            if (latencyData.history.length > 1000) latencyData.history.shift();
         } catch (error) {
-            latencyLogger.error(`❌ Не удалось получить задержку API`);
-            latencyLogger.error(error);
+            latencyLoggerInstance.error('Не удалось получить задержку Discord API.');
+            latencyLoggerInstance.error(error.stack || error);
         }
-    }, 5000);
-
+    }, 30000);
 }
 
-module.exports = { latencyLogger }
+module.exports = { latencyLogger, latencyData };

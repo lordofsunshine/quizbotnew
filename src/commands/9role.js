@@ -1,26 +1,51 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
-const Guild = require('../models/guildModel')
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { getGuild } = require('../utils/quizUtils');
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('role')
-        .setDescription('Установите роль для авто-викторины, чтобы бот упоминал её при авто-викторине').addRoleOption(opt => opt.setName("роль").setDescription("Выберите роль")),
+        .setDescription('Настраивает роль, которую бот упоминает при авто-викторине.')
+        .addRoleOption((option) =>
+            option
+                .setName('роль')
+                .setDescription('Роль для упоминания. Оставьте пустым, чтобы убрать настройку.')
+                .setRequired(false)),
 
     async execute(interaction) {
-        const perms = new PermissionsBitField(interaction.memberPermissions)
-        if (!perms.toArray().includes("Administrator")) return interaction.reply({ content: "❌ Нет доступа. Вам нужны права **Администратора**." })
-        const data = await Guild.findOne({ guild_id: interaction.guild.id })
-        if (!data.random_quiz_interval) return interaction.reply({ content: "❌ Система авто-викторин не работает на вашем сервере." })
-        let role = interaction.options.getRole('роль')
+        const permissions = new PermissionsBitField(interaction.memberPermissions);
+        if (!permissions.has(PermissionsBitField.Flags.Administrator)) {
+            return interaction.reply({
+                content: '❌ Нет доступа. Нужны права администратора.',
+                ephemeral: true
+            });
+        }
 
-              if (!role) {
-                  interaction.reply({ content: "✅ Роль удалена." })
-                  data.rolePing = undefined
-                  data.save()
+        const guild = await getGuild(interaction.guild.id);
+        if (!guild) {
+            return interaction.reply({ content: '❌ Не удалось загрузить настройки сервера.', ephemeral: true });
+        }
 
-              } else {
-                  interaction.reply({ content: "✅ Роль установлена." })
-                  data.rolePing = role.id
-                  data.save()
-              }
-          }
-      }
+        if (!guild.random_quiz_interval) {
+            return interaction.reply({
+                content: '❌ Авто-викторины на этом сервере не включены.',
+                ephemeral: true
+            });
+        }
+
+        const role = interaction.options.getRole('роль');
+        if (!role) {
+            guild.rolePing = null;
+            await guild.save();
+            return interaction.reply({ content: '✅ Роль для упоминания удалена.', ephemeral: true });
+        }
+
+        if (role.id === interaction.guild.id || role.managed) {
+            return interaction.reply({ content: '❌ Выберите обычную роль сервера.', ephemeral: true });
+        }
+
+        guild.rolePing = role.id;
+        await guild.save();
+
+        return interaction.reply({ content: `✅ Бот будет упоминать роль <@&${role.id}> перед авто-викториной.`, ephemeral: true });
+    }
+};

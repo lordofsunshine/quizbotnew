@@ -1,121 +1,138 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ModalBuilder, ComponentBuilder, TextInputBuilder, PermissionsBitField } = require('discord.js');
-const guildModel = require('../models/guildModel');
+const {
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    EmbedBuilder,
+    ModalBuilder,
+    SlashCommandBuilder,
+    TextInputBuilder,
+    TextInputStyle
+} = require('discord.js');
+const { getGuild } = require('../utils/quizUtils');
+const { canManageAuction } = require('../utils/auction');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('auction')
-        .setDescription('Аукцион сервера'),
+        .setDescription('Показывает магазин ролей сервера.'),
 
     async execute(interaction) {
+        const guildSettings = await getGuild(interaction.guild.id);
+        if (!guildSettings) {
+            return interaction.reply({ content: '❌ Не удалось загрузить настройки сервера.', ephemeral: true });
+        }
 
+        const items = guildSettings.auction?.list || [];
+        const description = items.length
+            ? items.map((item, index) => `- #${index + 1} <@&${item.role}> — ${item.price} очков${item.description ? `\n  ${item.description}` : ''}`).join('\n')
+            : 'В магазине пока нет ролей.';
 
-      let data = await guildModel.findOne({ guild_id: interaction.guild.id });
-      if(!data) data = await guildModel.create({ guild_id: interaction.guild.id });
-      let mapp = null
-      if (data.auction.list.length > 0) {
-          mapp = data.auction.list.map((x, i) => {
-              return `- #${i + 1} <@&${x.role}> - ${x.price} очков ${x.description ? `\n— ${x.description}` : ` `}`
-          })
-      }
-      let emb = new EmbedBuilder().setColor("#f3ae6d").setDescription(`${mapp ? `${mapp.join("\n")}` : `Тут пока пусто...`}`).setTitle("Аукцион сервера")
-      let btn1 = new ButtonBuilder().setCustomId('buy').setLabel('Купить').setStyle("Secondary")
-      let btn2 = new ButtonBuilder().setCustomId('add').setLabel('Добавить товар').setStyle("Secondary")
-      let btn3 = new ButtonBuilder().setCustomId('delete').setLabel('Удалить товар').setStyle("Secondary")
-      let ll = new ActionRowBuilder().addComponents(btn2)
-      if (mapp) ll = new ActionRowBuilder().addComponents(btn1, btn2, btn3)
-      interaction.reply({ embeds: [emb], components: [ll] }).then(async msg => {
-          let collector = msg.createMessageComponentCollector((b) => b, { componentType: 'BUTTON' })
+        const embed = new EmbedBuilder()
+            .setTitle('Магазин ролей сервера')
+            .setDescription(description)
+            .setColor('#f3ae6d');
 
+        const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+        const controls = [
+            new ButtonBuilder().setCustomId('auction_buy').setLabel('Купить').setStyle(ButtonStyle.Secondary).setDisabled(items.length === 0)
+        ];
 
-          collector.on('collect', async b => {
-              if (b.customId === 'buy') { //модалка
-                  const modal = new ModalBuilder()
-                      .setCustomId("buyAuction")
-                      .setTitle("Приобрести предмет в магазине")
-                      .addComponents(
-                          new ActionRowBuilder({
-                              components: [
-                                  new TextInputBuilder()
-                                      .setCustomId("roleNum")
-                                      .setLabel("Номер роли")
-                                      .setPlaceholder("Номер слева от роли (без #)")
-                                      .setStyle("Paragraph")
-                                      .setMaxLength(2)
-                                      .setMinLength(1)
-                                      .setRequired(true)
-                              ]
-                          })
-                      )
-                  return b.showModal(modal)
-              } else if (b.customId === 'add') { //модалка
-                  console.log(b.user.id, b.guild.members.cache.get(b.user.id).permissions.has(PermissionsBitField.Flags.Administrator), b.user.id !== b.guild.ownerId)
-                  if (b.user.id === b.guild.ownerId || b.guild.members.cache.get(b.user.id).permissions.has(PermissionsBitField.Flags.Administrator)) {
-                      const modal = new ModalBuilder()
-                          .setCustomId("setAuction")
-                          .setTitle("Выставить роль на аукцион")
-                          .addComponents(
-                              new ActionRowBuilder({
-                                  components: [
-                                      new TextInputBuilder()
-                                          .setCustomId("id")
-                                          .setLabel("ID роли")
-                                          .setPlaceholder("1011549124501442661")
-                                          .setStyle("Paragraph")
-                                          .setMaxLength(19)
-                                          .setMinLength(1)
-                                          .setRequired(true)
-                                  ]
-                              }),
-                              new ActionRowBuilder({
-                                  components: [
-                                      new TextInputBuilder()
-                                          .setCustomId("price")
-                                          .setLabel("Цена")
-                                          .setPlaceholder("100")
-                                          .setStyle("Paragraph")
-                                          .setMaxLength(10)
-                                          .setMinLength(1)
-                                          .setRequired(true),
-                                  ]
-                              }),
-                              new ActionRowBuilder({
-                                  components: [
-                                      new TextInputBuilder()
-                                          .setCustomId("desc")
-                                          .setLabel("Краткое описание")
-                                          .setPlaceholder("Супер-пупер крутая роль")
-                                          .setStyle("Paragraph")
-                                          .setMaxLength(30)
-                                          .setMinLength(1)
-                                          .setRequired(false)
-                                  ]
-                              })
-                          )
-                      return b.showModal(modal)
-                  }else return b.reply({ content: "❌ Вы не можете использовать данную функцию.", ephemeral: true })
-              }else if(b.customId === "delete"){
-                  if (b.user.id === b.guild.ownerId || b.guild.members.cache.get(b.user.id).permissions.has(PermissionsBitField.Flags.Administrator)) {
-                  const modal = new ModalBuilder()
-                      .setCustomId("deleteAuction")
-                      .setTitle("Удалить предмет в магазине")
-                      .addComponents(
-                          new ActionRowBuilder({
-                              components: [
-                                  new TextInputBuilder()
-                                      .setCustomId("roleNum")
-                                      .setLabel("Номер роли")
-                                      .setPlaceholder("Номер слева от роли (без #)")
-                                      .setStyle("Paragraph")
-                                      .setMaxLength(2)
-                                      .setMinLength(1)
-                                      .setRequired(true)
-                              ]
-                          })
-                      )
-                  return b.showModal(modal)
-              }else return b.reply({ content: "❌ Вы не можете использовать данную функцию.", ephemeral: true })
-          }
-          })
-      })
+        if (canManageAuction(member, interaction.guild)) {
+            controls.push(
+                new ButtonBuilder().setCustomId('auction_add').setLabel('Добавить товар').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('auction_delete').setLabel('Удалить товар').setStyle(ButtonStyle.Secondary).setDisabled(items.length === 0)
+            );
+        }
+
+        const row = new ActionRowBuilder().addComponents(controls);
+        await interaction.reply({ embeds: [embed], components: [row] });
+        const message = await interaction.fetchReply();
+
+        const collector = message.createMessageComponentCollector({ time: 120000 });
+        collector.on('collect', async (button) => {
+            if (button.customId === 'auction_buy') {
+                return button.showModal(
+                    new ModalBuilder()
+                        .setCustomId('buyAuction')
+                        .setTitle('Купить роль')
+                        .addComponents(new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('roleNum')
+                                .setLabel('Номер товара')
+                                .setPlaceholder('Например: 1')
+                                .setStyle(TextInputStyle.Short)
+                                .setMaxLength(3)
+                                .setMinLength(1)
+                                .setRequired(true)
+                        ))
+                );
+            }
+
+            const buttonMember = await button.guild.members.fetch(button.user.id).catch(() => null);
+            if (!canManageAuction(buttonMember, button.guild)) {
+                return button.reply({ content: '❌ Нет доступа. Нужны права администратора.', ephemeral: true });
+            }
+
+            if (button.customId === 'auction_add') {
+                return button.showModal(
+                    new ModalBuilder()
+                        .setCustomId('setAuction')
+                        .setTitle('Добавить роль в магазин')
+                        .addComponents(
+                            new ActionRowBuilder().addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('id')
+                                    .setLabel('ID роли')
+                                    .setPlaceholder('1011549124501442661')
+                                    .setStyle(TextInputStyle.Short)
+                                    .setMaxLength(19)
+                                    .setMinLength(1)
+                                    .setRequired(true)
+                            ),
+                            new ActionRowBuilder().addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('price')
+                                    .setLabel('Цена')
+                                    .setPlaceholder('100')
+                                    .setStyle(TextInputStyle.Short)
+                                    .setMaxLength(10)
+                                    .setMinLength(1)
+                                    .setRequired(true)
+                            ),
+                            new ActionRowBuilder().addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('desc')
+                                    .setLabel('Короткое описание')
+                                    .setPlaceholder('Например: VIP-роль')
+                                    .setStyle(TextInputStyle.Paragraph)
+                                    .setMaxLength(80)
+                                    .setRequired(false)
+                            )
+                        )
+                );
+            }
+
+            if (button.customId === 'auction_delete') {
+                return button.showModal(
+                    new ModalBuilder()
+                        .setCustomId('deleteAuction')
+                        .setTitle('Удалить товар')
+                        .addComponents(new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('roleNum')
+                                .setLabel('Номер товара')
+                                .setPlaceholder('Например: 1')
+                                .setStyle(TextInputStyle.Short)
+                                .setMaxLength(3)
+                                .setMinLength(1)
+                                .setRequired(true)
+                        ))
+                );
+            }
+        });
+
+        collector.on('end', async () => {
+            await message.edit({ components: [] }).catch(() => null);
+        });
     }
-}
+};

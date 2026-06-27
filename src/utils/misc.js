@@ -1,12 +1,17 @@
-const {emojis} = require("../misc");
+const { emojis } = require('../misc');
 
 function getCategoryEmoji(category) {
-    for (const [key, value] of Object.entries(emojis.categories)) if (category.toLowerCase().startsWith(key)) return value;
-    return "❓";
+    const normalized = String(category ?? '').toLowerCase();
+    for (const [key, value] of Object.entries(emojis.categories)) {
+        if (normalized.startsWith(key)) return value;
+    }
+
+    return '❓';
 }
 
 function capitalizeFirstLetter(string) {
-    return string.charAt(0).toUpperCase() + string.slice(1);
+    const value = String(string ?? '');
+    return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-module.exports = {getCategoryEmoji, capitalizeFirstLetter}
+module.exports = { getCategoryEmoji, capitalizeFirstLetter };

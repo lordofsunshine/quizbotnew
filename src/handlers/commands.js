@@ -1,146 +1,196 @@
-/**
- * @fileoverview This file handles the registration and execution of slash commands.
- * @module handlers/commands
- */
-
-// ==================== //
-
 require('dotenv').config();
-const { Logger } = require('../utils/logger');
-const { REST, Routes } = require('discord.js');
-const { join } = require("path");
+
 const fs = require('fs');
-const { getUser, getGuild } = require('../utils/quizUtils');
+const { join } = require('path');
+const { REST, Routes } = require('discord.js');
+const { Logger } = require('../utils/logger');
+const { getGuild } = require('../utils/quizUtils');
+const { canManageAuction, getAuctionItemByInput, parseAuctionPrice } = require('../utils/auction');
+const userModel = require('../models/userModel');
 
 const commandsLogger = new Logger('cmds', true);
-const token = process.env.DEV_MODE ? process.env.TOKEN : process.env.DEV_TOKEN;
-const rest = new REST({ version: '9' }).setToken(token);
 
-// ==================== //
+function getDiscordToken() {
+    return process.env.DEV_MODE
+        ? (process.env.DEV_TOKEN || process.env.TOKEN)
+        : (process.env.TOKEN || process.env.DEV_TOKEN);
+}
 
-/**
- * @name Registers slash commands for a Discord client.
- * @param {Object} client - The Discord client object.
- * @param {Array} commands - An array of commands to register.
- */
+async function sendInteractionError(interaction, message) {
+    const payload = { content: message, ephemeral: true };
+    if (interaction.deferred || interaction.replied) return interaction.followUp(payload).catch(() => null);
+    return interaction.reply(payload).catch(() => null);
+}
 
 async function registerCommands(client, commands) {
-
-    commandsLogger.info(`Регистрация команд с косой чертой...`);
+    commandsLogger.info('Регистрация slash-команд...');
 
     try {
-        await rest.put(
-            Routes.applicationCommands(client.user.id),
-            { body: commands },
-        )
-
-        commandsLogger.success(`Успешно зарегистрированные косые команды`);
-
+        const rest = new REST({ version: '10' }).setToken(getDiscordToken());
+        await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+        commandsLogger.success('Slash-команды успешно зарегистрированы.');
     } catch (error) {
-        commandsLogger.error(`Не удалось зарегистрировать команды косой черты`);
-        commandsLogger.error(error);
+        commandsLogger.error('Не удалось зарегистрировать slash-команды.');
+        commandsLogger.error(error.stack || error);
     }
 }
 
-// ==================== //
+async function ensureManageAuctionAccess(interaction) {
+    const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+    if (canManageAuction(member, interaction.guild)) return true;
+
+    await sendInteractionError(interaction, '❌ Нет доступа. Нужны права администратора.');
+    return false;
+}
+
+async function handleBuyAuction(interaction) {
+    const guild = await getGuild(interaction.guild.id);
+    if (!guild) return sendInteractionError(interaction, '❌ Не удалось загрузить настройки сервера.');
+
+    let auctionItem;
+    try {
+        auctionItem = getAuctionItemByInput(guild.auction?.list || [], interaction.fields.getTextInputValue('roleNum')).item;
+        auctionItem.price = parseAuctionPrice(auctionItem.price);
+    } catch (error) {
+        return sendInteractionError(interaction, `❌ ${error.message}`);
+    }
+
+    const role = await interaction.guild.roles.fetch(auctionItem.role).catch(() => null);
+    if (!role) return sendInteractionError(interaction, '❌ Эта роль больше не существует на сервере.');
+
+    const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+    if (!member) return sendInteractionError(interaction, '❌ Не удалось получить участника сервера.');
+    if (member.roles.cache.has(role.id)) {
+        return sendInteractionError(interaction, '❌ У вас уже есть эта роль.');
+    }
+
+    const updatedUser = await userModel.findOneAndUpdate(
+        { user_id: interaction.user.id, points: { $gte: auctionItem.price } },
+        { $inc: { points: -auctionItem.price } },
+        { new: true }
+    );
+
+    if (!updatedUser) {
+        return sendInteractionError(interaction, '❌ У вас недостаточно очков.');
+    }
+
+    try {
+        await member.roles.add(role.id);
+    } catch (error) {
+        await userModel.updateOne({ user_id: interaction.user.id }, { $inc: { points: auctionItem.price } });
+        return sendInteractionError(interaction, '❌ Не удалось выдать роль. Очки возвращены на баланс.');
+    }
+
+    return interaction.reply({ content: '✅ Роль успешно куплена.', ephemeral: true });
+}
+
+async function handleSetAuction(interaction) {
+    if (!await ensureManageAuctionAccess(interaction)) return;
+
+    const roleId = interaction.fields.getTextInputValue('id').trim();
+    const description = interaction.fields.getTextInputValue('desc')?.trim() || null;
+    let price;
+
+    try {
+        price = parseAuctionPrice(interaction.fields.getTextInputValue('price'));
+    } catch (error) {
+        return sendInteractionError(interaction, `❌ ${error.message}`);
+    }
+
+    const role = await interaction.guild.roles.fetch(roleId).catch(() => null);
+    if (!role || role.id === interaction.guild.id || role.managed) {
+        return sendInteractionError(interaction, '❌ Укажите обычную роль, которая существует на сервере.');
+    }
+
+    const botMember = await interaction.guild.members.fetchMe().catch(() => null);
+    if (!botMember || botMember.roles.highest.comparePositionTo(role) <= 0) {
+        return sendInteractionError(interaction, '❌ Бот не сможет выдать эту роль: она находится выше или на одном уровне с ролью бота.');
+    }
+
+    const guild = await getGuild(interaction.guild.id);
+    if (!guild) return sendInteractionError(interaction, '❌ Не удалось загрузить настройки сервера.');
+
+    guild.auction.list.push({ role: role.id, price, description });
+    await guild.save();
+
+    return interaction.reply({ content: '✅ Товар добавлен в магазин.', ephemeral: true });
+}
+
+async function handleDeleteAuction(interaction) {
+    if (!await ensureManageAuctionAccess(interaction)) return;
+
+    const guild = await getGuild(interaction.guild.id);
+    if (!guild) return sendInteractionError(interaction, '❌ Не удалось загрузить настройки сервера.');
+
+    let index;
+    try {
+        index = getAuctionItemByInput(guild.auction?.list || [], interaction.fields.getTextInputValue('roleNum')).index;
+    } catch (error) {
+        return sendInteractionError(interaction, `❌ ${error.message}`);
+    }
+
+    guild.auction.list.splice(index, 1);
+    await guild.save();
+
+    return interaction.reply({ content: '✅ Товар удалён из магазина.', ephemeral: true });
+}
+
+async function handleModalSubmit(interaction) {
+    if (interaction.customId === 'buyAuction') return handleBuyAuction(interaction);
+    if (interaction.customId === 'setAuction') return handleSetAuction(interaction);
+    if (interaction.customId === 'deleteAuction') return handleDeleteAuction(interaction);
+}
 
 module.exports = async (client) => {
-
-    // Load commands
     const commands = [];
-    const commandFiles = fs.readdirSync(join(__dirname, '..', 'commands')).filter(file => file.endsWith('.js'));
+    const commandFiles = fs.readdirSync(join(__dirname, '..', 'commands')).filter((file) => file.endsWith('.js'));
+
     for (const file of commandFiles) {
         const command = require(join(__dirname, '..', 'commands', file));
-        await client.commands.set(command.data.name, command);
+        if (!command?.data?.toJSON || typeof command.execute !== 'function') {
+            commandsLogger.warn(`Файл ${file} пропущен: команда оформлена неполностью.`);
+            continue;
+        }
+
+        client.commands.set(command.data.name, command);
         commands.push(command.data.toJSON());
     }
 
-    // Load buttons
-    const buttons = [];
-    // const buttonFiles = fs.readdirSync(join(__dirname, '..', 'buttons')).filter(file => file.endsWith('.js'));
-    // for (const file of buttonFiles) {
-    //     const button = require(join(__dirname, '..', 'buttons', file));
-    //     buttons.push(button.data.toJSON());
-    // }
-
-    // Register commands and buttons
     await registerCommands(client, commands);
-    // await registerCommands(client, buttons);
 
-    // Log registered commands and buttons
     commandsLogger.separator();
-    commandsLogger.info(`Зарегистрировано ${commands.length} слешей`);
-    commandsLogger.info(`Зарегистрировано ${buttons.length} кнопок`);
+    commandsLogger.info(`Зарегистрировано slash-команд: ${commands.length}`);
     commandsLogger.separator();
 
-    client.on('interactionCreate', async interaction => {
+    client.on('interactionCreate', async (interaction) => {
         if (interaction.isCommand() || interaction.isAutocomplete()) {
-
-
-
             const command = client.commands.get(interaction.commandName);
-            if (!command) {
-                commandsLogger.error(`❌ Команда ${interaction.commandName} не существует. Сообщите о проблеме в **[поддержку бота](https://discord.gg/losteam)**.`);
-                return;
+            if (!command) return;
+
+            try {
+                if (interaction.isAutocomplete()) {
+                    if (typeof command.autocomplete === 'function') {
+                        await command.autocomplete(interaction, client);
+                    }
+                    return;
+                }
+
+                await command.execute(interaction, client);
+            } catch (error) {
+                commandsLogger.error(error.stack || error);
+                await sendInteractionError(interaction, '❌ При выполнении команды произошла ошибка. Сообщите разработчику бота.');
             }
 
-            if (interaction.isCommand()) {
-                try {
-                    await command.execute(interaction, client);
-                } catch (error) {
-                    commandsLogger.error(error.stack)
-                    await interaction.reply({ content: '❌ При выполнении этой команды произошла ошибка! Сообщите о проблеме в **[поддержку бота](https://discord.gg/losteam)**.', ephemeral: true });
-                }
-            } else if (interaction.isAutocomplete()) {
-                try {
-                    await command.autocomplete(interaction, client);
-                } catch (error) {
-                    commandsLogger.error(error.stack)
-                }
-            }
-        } else {
+            return;
+        }
 
-            if (interaction.customId === "buyAuction") {
-                let p = interaction.fields.getTextInputValue("roleNum")
-                let u = await getUser(interaction.user.id)
-                let pp = await getGuild(interaction.guild.id)
-                let rr = pp.auction.list[p - 1]
-                if (!rr) return interaction.reply({ content: "❌ Такого номера роли не существует.", ephemeral: true }).catch(e=>interaction.followUp({ content: "❌ У Вас недостаточно очков.", ephemeral: true }))
-                if (u.points < rr.price) return interaction.reply({ content: "❌ У Вас недостаточно очков.", ephemeral: true }).catch(e=>interaction.followUp({ content: "❌ У Вас недостаточно очков.", ephemeral: true }))
-                u.points = u.points - rr.price
-                u.save()
-                let us = interaction.guild.members.cache.get(interaction.user.id)
-                us.roles.add(pp.auction.list[p - 1].role).then(x =>
-                    interaction.reply({ content: "✅ Вы успешно приобрели роль.", ephemeral: true })
-                        .catch(a => interaction.followUp({ content: "✅ Вы успешно приобрели роль.", ephemeral: true })
-                        )).catch(err =>
-                            interaction.reply({ content: "❌ Ошибка при выдаче роли. **Не хватает прав или роль находится выше роли бота.**" }).catch(err=>
-                                interaction.followUp({ content: "❌ Ошибка при выдаче роли. **Не хватает прав или роль находится выше роли бота.**" }))
-                        )
-
-            } else if (interaction.customId === "setAuction") {
-                let id = interaction.fields.getTextInputValue("id")
-                let price = interaction.fields.getTextInputValue("price")
-                let desc = interaction.fields.getTextInputValue("desc") || null
-
-                let u = await getUser(interaction.user.id)
-                let pp = await getGuild(interaction.guild.id)
-                let rCheck = interaction.guild.roles.cache.get(id) || await interaction.guild.roles.fetch(id).catch(err => null)
-                if (!rCheck) return interaction.reply({ content: "❌ Эта роль отсутствует на сервере.", ephemeral: true }).catch(err => interaction.followUp({ content: "❌ Эта роль отсутствует на сервере.", ephemeral: true }))
-
-                pp.auction.list.push({ role: id, price: price, description: desc })
-                pp.save()
-                interaction.reply({ content: "✅ Товар успешно добавлен.", ephemeral: true }).catch(err => interaction.followUp({ content: "✅ Товар успешно добавлен.", ephemeral: true }))
-            } else if (interaction.customId === "deleteAuction") {
-                let p = interaction.fields.getTextInputValue("roleNum")
-                let pp = await getGuild(interaction.guild.id)
-                let rr = pp.auction.list[p - 1]
-                if (!rr) return interaction.reply({ content: "❌ Такого номера роли не существует.", ephemeral: true })
-                interaction.reply({ content: "✅ Вы успешно удалили товар.", ephemeral: true })
-                pp.auction.list.splice(p - 1, 1)
-                pp.save()
-                console.log('deleted', rr)
+        if (interaction.isModalSubmit()) {
+            try {
+                await handleModalSubmit(interaction);
+            } catch (error) {
+                commandsLogger.error(error.stack || error);
+                await sendInteractionError(interaction, '❌ При обработке формы произошла ошибка.');
             }
         }
     });
-}
+};

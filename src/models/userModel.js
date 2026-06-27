@@ -1,10 +1,8 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-    user_id: { type: String, required: true },
+    user_id: { type: String, required: true, unique: true, index: true },
     points: { type: Number, default: 0 },
-
-    // Format: [ "question", "amountOfTimes", "category" ]
     correct_answers: { type: Array, default: [] },
     incorrect_answers: { type: Array, default: [] },
 

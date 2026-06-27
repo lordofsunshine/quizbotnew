@@ -1,30 +1,32 @@
 {
-  "name": "quizzy-bot",
+  "name": "quiz-bot",
   "version": "1.0.0",
   "description": "",
   "main": "src/main.js",
   "scripts": {
     "start": "node src/main.js",
     "dev": "nodemon --trace-warnings src/main.js --ignore 'logs/* docs/*'",
-    "migration": "node src/utils/autoConfigMigration.js"
+    "migration": "node src/utils/autoConfigMigration.js",
+    "test": "node --test"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "lordofsunshine github",
+  "license": "MIT",
   "dependencies": {
     "@iamtraction/google-translate": "^2.0.1",
-    "canvas": "^2.11.2",
+    "canvas": "^3.2.3",
     "chalk": "^4.1.2",
-    "cron": "^3.1.6",
-    "discord.js": "^14.14.1",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "jest": "^29.7.0",
-    "jest-mock-extended": "^3.0.5",
-    "mongoose": "^8.0.0",
-    "node-cron": "^3.0.2"
+    "cron": "^4.4.0",
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.4.2",
+    "mongoose": "^9.7.3"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.1.14"
+  },
+  "overrides": {
+    "undici": "6.27.0",
+    "braces": "3.0.3",
+    "picomatch": "2.3.2"
   }
 }
